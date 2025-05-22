@@ -84,17 +84,68 @@ class OrderController extends Controller
     }
 
     // Update an order
-    public function update(Request $request, Order $order)
+    public function update(Request $request, $order_id)
     {
-        $validated = $request->validate([
-            'status' => 'in:Pending,In Progress,Cancelled,Completed',
-            'delivery_time' => 'nullable|date',
-            'product_quantity' => 'nullable|integer'
+        $order = Order::with(['customer', 'product'])->findOrFail($order_id);
+
+        try {
+            $validated = $request->validate([
+                // Customer fields
+                'customer_name' => 'required|string',
+                'customer_address' => 'required|string',
+                'customer_city' => 'required|string',
+                'customer_phone_number' => 'required|string',
+                'customer_email' => 'required|email',
+                'customer_payment_method' => 'required|string',
+
+                // Product fields
+                'product_name' => 'required|string',
+                'product_description' => 'nullable|string',
+                'product_price' => 'required|numeric',
+                'product_quantity' => 'required|integer',
+                'product_category' => 'required|string',
+
+                // Order fields
+                'delivery_time' => 'nullable|date',
+                'status' => 'in:Pending,In Progress,Cancelled,Completed',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        // Update Customer
+        $order->customer->update([
+            'name' => $validated['customer_name'],
+            'address' => $validated['customer_address'],
+            'city' => $validated['customer_city'],
+            'phone_number' => $validated['customer_phone_number'],
+            'email' => $validated['customer_email'],
+            'payment_method' => $validated['customer_payment_method'],
         ]);
 
-        $order->update($validated);
+        // Update Product
+        $order->product->update([
+            'name' => $validated['product_name'],
+            'description' => $validated['product_description'],
+            'price' => $validated['product_price'],
+            'category' => $validated['product_category'],
+        ]);
 
-        return response()->json(['message' => 'Order updated', 'order' => $order]);
+        // Update Order
+        $deliveryTime = $validated['delivery_time']
+            ? \Carbon\Carbon::parse($validated['delivery_time'])->format('Y-m-d H:i:s')
+            : null;
+
+        $order->update([
+            'product_quantity' => $validated['product_quantity'],
+            'delivery_time' => $deliveryTime,
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json(['message' => 'Order and related data updated', 'order' => $order]);
     }
 
     // Delete an order
