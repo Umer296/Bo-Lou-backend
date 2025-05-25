@@ -12,8 +12,27 @@ class OrderController extends Controller
     // List all orders
     public function index()
     {
-        $limit = request()->get('limit', 10); // Default to 10 if not provided
-        return Order::with(['customer', 'product', 'shipment'])->paginate($limit);
+        $limit = request()->get('limit', 10);
+
+        $status = request()->get('status');
+        $brand = request()->get('brand');
+
+        $query = Order::with(['customer', 'product', 'shipment']);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($brand) {
+            $query->whereHas('product', function ($q) use ($brand) {
+                $q->where('brand', $brand);
+            });
+        }
+
+        // Order by created_at descending
+        $query->orderBy('created_at', 'desc');
+
+        return $query->paginate($limit);
     }
 
     // Store a new order
@@ -32,7 +51,7 @@ class OrderController extends Controller
                 'product_description' => 'nullable|string',
                 'product_price' => 'required|numeric',
                 'product_quantity' => 'required|integer',
-                'product_category' => 'required|string',
+                'brand' => 'required|string',
     
                 'delivery_time' => 'nullable|date',
             ]);
@@ -58,7 +77,7 @@ class OrderController extends Controller
             'name' => $validated['product_name'],
             'description' => $validated['product_description'],
             'price' => $validated['product_price'],
-            'category' => $validated['product_category'],
+            'brand' => $validated['brand'],
         ]);
     
         // Create order
@@ -103,7 +122,7 @@ class OrderController extends Controller
                 'product_description' => 'nullable|string',
                 'product_price' => 'required|numeric',
                 'product_quantity' => 'required|integer',
-                'product_category' => 'required|string',
+                'brand' => 'required|string',
 
                 // Order fields
                 'delivery_time' => 'nullable|date',
@@ -131,7 +150,7 @@ class OrderController extends Controller
             'name' => $validated['product_name'],
             'description' => $validated['product_description'],
             'price' => $validated['product_price'],
-            'category' => $validated['product_category'],
+            'brand' => $validated['brand'],
         ]);
 
         // Update Order

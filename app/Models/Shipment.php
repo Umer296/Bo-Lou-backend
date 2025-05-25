@@ -9,7 +9,7 @@ class Shipment extends Model
 {
     use SoftDeletes;
     protected $fillable = [
-        'product_category', 'product_quantity', 'product_description', 'arriving_time_date', 'price',
+        'brand', 'product_quantity', 'product_description', 'arriving_time_date', 'price',
     ];
 
     public function orders()

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('shipments', function (Blueprint $table) {
             $table->id();
-            $table->string('product_category');
+            $table->string('brand');
             $table->integer('product_quantity');
             $table->text('product_description')->nullable();
             $table->timestamp('arriving_time_date')->nullable();
