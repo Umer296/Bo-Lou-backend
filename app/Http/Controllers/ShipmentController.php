@@ -3,63 +3,85 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shipment;
+use App\Models\Order;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ShipmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'brand' => 'required|string',
+            'product_quantity' => 'required|integer',
+            'product_description' => 'nullable|string',
+            'arriving_time_date' => 'required|date',
+            'price' => 'required|numeric',
+            'orders' => 'required|array',
+            'orders.*' => 'exists:orders,id',
+        ]);
+
+        // Convert ISO date to MySQL-compatible format
+        $validated['arriving_time_date'] = Carbon::parse($validated['arriving_time_date'])->format('Y-m-d H:i:s');
+
+        // Create shipment
+        $shipment = Shipment::create($validated);
+
+        // Update orders
+        Order::whereIn('id', $validated['orders'])->update([
+            'shipment_id' => $shipment->id,
+            'status' => 'In Progress',
+        ]);
+
+        return response()->json(['message' => 'Shipment created successfully', 'shipment' => $shipment]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Shipment $shipment)
+    public function show($id)
     {
-        //
+        $shipment = Shipment::with('orders')->findOrFail($id);
+        return response()->json($shipment);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Shipment $shipment)
+    public function index(Request $request)
     {
-        //
+        $limit = $request->get('limit', 10); // default 10 per page
+        $shipments = Shipment::with('orders')->paginate($limit);
+        return response()->json($shipments);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Shipment $shipment)
+    // ✏️ Update a shipment
+    public function update(Request $request, $id)
     {
-        //
+        $shipment = Shipment::findOrFail($id);
+
+        $validated = $request->validate([
+            'brand' => 'sometimes|required|string',
+            'product_quantity' => 'sometimes|required|integer',
+            'product_description' => 'nullable|string',
+            'arriving_time_date' => 'sometimes|required|date',
+            'price' => 'sometimes|required|numeric',
+            'orders' => 'sometimes|required|array',
+            'orders.*' => 'exists:orders,id',
+        ]);
+
+        $shipment->update($validated);
+
+        // Optionally update orders if provided
+        if (isset($validated['orders'])) {
+            Order::whereIn('id', $validated['orders'])->update([
+                'shipment_id' => $shipment->id,
+                'status' => 'In Progress',
+            ]);
+        }
+
+        return response()->json(['message' => 'Shipment updated', 'shipment' => $shipment]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Shipment $shipment)
+    public function destroy($id)
     {
-        //
+        $shipment = Shipment::findOrFail($id);
+        $shipment->delete();
+
+        return response()->json(['message' => 'Shipment deleted']);
     }
 }
