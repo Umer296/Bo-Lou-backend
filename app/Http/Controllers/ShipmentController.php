@@ -33,6 +33,8 @@ class ShipmentController extends Controller
             'status' => 'In Progress',
         ]);
 
+        $shipments = Shipment::orderBy('created_at', 'desc')->get();
+
         return response()->json(['message' => 'Shipment created successfully', 'shipment' => $shipment]);
     }
 
@@ -80,8 +82,17 @@ class ShipmentController extends Controller
     public function destroy($id)
     {
         $shipment = Shipment::findOrFail($id);
+
+        // Update associated orders: remove shipment_id and reset status to "Pending"
+        Order::where('shipment_id', $shipment->id)->update([
+            'shipment_id' => null,
+            'status' => 'Pending',
+        ]);
+
+        // Delete the shipment
         $shipment->delete();
 
-        return response()->json(['message' => 'Shipment deleted']);
+        return response()->json(['message' => 'Shipment deleted and orders reverted to pending']);
     }
+
 }
