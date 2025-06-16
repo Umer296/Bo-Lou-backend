@@ -47,7 +47,13 @@ class ShipmentController extends Controller
     public function index(Request $request)
     {
         $limit = $request->get('limit', 10); // default 10 per page
-        $shipments = Shipment::with('orders')->paginate($limit);
+
+        $shipments = Shipment::with([
+            'orders.customer',
+            'orders.product',
+            'orders.shipment'
+        ])->paginate($limit);
+
         return response()->json($shipments);
     }
 
