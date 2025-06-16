@@ -33,8 +33,6 @@ class ShipmentController extends Controller
             'status' => 'In Progress',
         ]);
 
-        $shipments = Shipment::orderBy('created_at', 'desc')->get();
-
         return response()->json(['message' => 'Shipment created successfully', 'shipment' => $shipment]);
     }
 
@@ -52,7 +50,9 @@ class ShipmentController extends Controller
             'orders.customer',
             'orders.product',
             'orders.shipment'
-        ])->paginate($limit);
+        ])
+        ->orderBy('created_at', 'desc') // order by latest
+        ->paginate($limit);
 
         return response()->json($shipments);
     }
