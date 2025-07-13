@@ -38,7 +38,11 @@ class ShipmentController extends Controller
 
     public function show($id)
     {
-        $shipment = Shipment::with('orders')->findOrFail($id);
+        $shipment = Shipment::with([
+            'orders.customer',
+            'orders.product',
+            'orders.shipment'
+        ])->findOrFail($id);
         return response()->json($shipment);
     }
 
