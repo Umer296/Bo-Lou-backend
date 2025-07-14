@@ -62,11 +62,10 @@ class ShipmentController extends Controller
     }
 
     // ✏️ Update a shipment
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        $shipment = Shipment::findOrFail($id);
-
         $validated = $request->validate([
+            'shipment_id' => 'required|exists:shipments,id',
             'brand' => 'sometimes|required|string',
             'product_quantity' => 'sometimes|required|integer',
             'product_description' => 'nullable|string',
@@ -76,9 +75,18 @@ class ShipmentController extends Controller
             'orders.*' => 'exists:orders,id',
         ]);
 
-        $shipment->update($validated);
+        $shipment = Shipment::findOrFail($validated['shipment_id']);
 
-        // Optionally update orders if provided
+        // Update shipment fields (exclude 'orders' and 'shipment_id' from update array)
+        $shipment->update(collect($validated)->except(['shipment_id', 'orders'])->toArray());
+
+        // Detach all existing orders from this shipment
+        Order::where('shipment_id', $shipment->id)->update([
+            'shipment_id' => null,
+            'status' => 'Pending', // or whatever default status makes sense
+        ]);
+
+        // Attach new orders, if provided
         if (isset($validated['orders'])) {
             Order::whereIn('id', $validated['orders'])->update([
                 'shipment_id' => $shipment->id,
@@ -86,7 +94,10 @@ class ShipmentController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Shipment updated', 'shipment' => $shipment]);
+        return response()->json([
+            'message' => 'Shipment updated successfully',
+            'shipment' => $shipment,
+        ]);
     }
 
     public function destroy($id)
