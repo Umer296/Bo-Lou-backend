@@ -74,6 +74,8 @@ class ShipmentController extends Controller
             'orders' => 'sometimes|required|array',
             'orders.*' => 'exists:orders,id',
         ]);
+        
+        $validated['arriving_time_date'] = Carbon::parse($validated['arriving_time_date'])->format('Y-m-d H:i:s');
 
         $shipment = Shipment::findOrFail($validated['shipment_id']);
 
