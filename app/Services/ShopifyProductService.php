@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
-use App\Models\ShopifyProduct;
+use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\ProductVariant;
 
 class ShopifyProductService
 {
@@ -36,20 +38,72 @@ class ShopifyProductService
             $products = $response->json('products') ?? [];
 
             foreach ($products as $product) {
-                ShopifyProduct::updateOrCreate(
-                    ['shopify_id' => $product['id']],
+                // Create or update Product
+                $dbProduct = Product::updateOrCreate(
+                    ['name' => $product['title']], // you can also store shopify_id in a new column
                     [
-                        'title' => $product['title'],
-                        'body_html' => $product['body_html'],
-                        'vendor' => $product['vendor'],
-                        'product_type' => $product['product_type'],
-                        'handle' => $product['handle'],
-                        'images' => json_encode($product['images']),
-                        'variants' => json_encode($product['variants']),
+                        'description' => $product['body_html'] ?? '',
+                        'brand' => 'Shein',
                     ]
                 );
+
+                // Store product images
+                if (!empty($product['images'])) {
+                    foreach ($product['images'] as $index => $image) {
+                        ProductImage::updateOrCreate(
+                            [
+                                'product_id' => $dbProduct->id,
+                                'image_path' => $image['src'],
+                                'product_variant_id' => null
+                            ],
+                            [
+                                'is_main' => $index === 0
+                            ]
+                        );
+                    }
+                }
+
+                // Store product variants
+                if (!empty($product['variants'])) {
+                    foreach ($product['variants'] as $variant) {
+                        $dbVariant = ProductVariant::updateOrCreate(
+                            [
+                                'sku' => $variant['sku'] ?? null,
+                                'product_id' => $dbProduct->id
+                            ],
+                            [
+                                'name' => $variant['title'] ?? '',
+                                'price' => $variant['price'] ?? 0,
+                                'stock' => $variant['inventory_quantity'] ?? 0,
+                                'attributes' => [
+                                    'option1' => $variant['option1'] ?? null,
+                                    'option2' => $variant['option2'] ?? null,
+                                    'option3' => $variant['option3'] ?? null
+                                ]
+                            ]
+                        );
+
+                        // Link variant-specific images if available
+                        if (!empty($variant['image_id']) && !empty($product['images'])) {
+                            $variantImage = collect($product['images'])->firstWhere('id', $variant['image_id']);
+                            if ($variantImage) {
+                                ProductImage::updateOrCreate(
+                                    [
+                                        'product_id' => $dbProduct->id,
+                                        'product_variant_id' => $dbVariant->id,
+                                        'image_path' => $variantImage['src']
+                                    ],
+                                    [
+                                        'is_main' => true
+                                    ]
+                                );
+                            }
+                        }
+                    }
+                }
             }
 
+            // Handle pagination
             $linkHeader = $response->header('Link');
             if ($linkHeader && preg_match('/<([^>]+)>; rel="next"/', $linkHeader, $matches)) {
                 $url = $matches[1];

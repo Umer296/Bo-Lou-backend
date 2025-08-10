@@ -12,7 +12,11 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+        $products = Product::with(['variants', 'images'])
+            ->latest()
+            ->paginate(10); // paginate with 10 items per page
+
+        return response()->json($products);
     }
 
     /**
