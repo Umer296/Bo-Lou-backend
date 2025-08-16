@@ -8,12 +8,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Shipment extends Model
 {
     use SoftDeletes;
+
     protected $fillable = [
-        'brand', 'product_quantity', 'product_description', 'arriving_time_date', 'price',
+        'brand',
+        'product_quantity',
+        'product_description',
+        'arriving_time_date',
+        'price',
     ];
 
-    public function orders()
+    /**
+     * Shipment has many OrderItems
+     */
+    public function orderItems()
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(OrderItem::class);
     }
 }

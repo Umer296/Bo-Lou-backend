@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Order extends Model
 {
     use SoftDeletes;
+
     protected $fillable = [
-        'customer_id', 'product_id', 'product_quantity', 'delivery_time', 'shipment_id', 'status',
+        'customer_id',
+        'delivery_time',
+        'status',
+        'total_price',
     ];
 
     public function customer()
@@ -17,15 +21,15 @@ class Order extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function products()
     {
         return $this->belongsToMany(Product::class, 'order_items')
                     ->withPivot('product_quantity')
                     ->withTimestamps();
-    }
-
-    public function shipment()
-    {
-        return $this->belongsTo(Shipment::class);
     }
 }

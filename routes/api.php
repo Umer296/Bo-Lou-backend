@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\Api\ShopifyProductsController;
 
 /*
@@ -24,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('orders', OrderController::class);
     Route::apiResource('shipments', ShipmentController::class);
     Route::apiResource('products', ProductController::class);
+    Route::apiResource('order-item', OrderItemController::class);
     Route::get('/shopify-products', [ShopifyProductsController::class, 'index']);
 
 });
