@@ -11,9 +11,10 @@ class Shipment extends Model
 
     protected $fillable = [
         'brand',
-        'product_quantity',
-        'product_description',
+        'shipment_quantity',
+        'shipment_description',
         'arriving_time_date',
+        'total_price_variant',
         'price',
     ];
 

@@ -33,7 +33,7 @@ class OrderItemController extends Controller
                 foreach ($item->product->images as $img) {
                     $images[] = [
                         'id'    => $img->id,
-                        'image' => asset('product_images/' . $img->image),
+                        'image' => $img->image_path,
                     ];
                 }
             }
