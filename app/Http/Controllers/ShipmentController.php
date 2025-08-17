@@ -12,28 +12,50 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'brand' => 'required|string',
-            'product_quantity' => 'required|integer',
+            'brand'               => 'required|string',
+            'product_quantity'    => 'required|integer',
             'product_description' => 'nullable|string',
-            'arriving_time_date' => 'required|date',
-            'price' => 'required|numeric',
-            'orders' => 'required|array',
-            'orders.*' => 'exists:orders,id',
+            'arriving_time_date'  => 'required|date',
+            'price'               => 'required|numeric',
+            'total_price_variant' => 'required|numeric',
+            'order_items'         => 'required|array',
+            'order_items.*'       => 'exists:order_items,id',
         ]);
 
         // Convert ISO date to MySQL-compatible format
         $validated['arriving_time_date'] = Carbon::parse($validated['arriving_time_date'])->format('Y-m-d H:i:s');
 
         // Create shipment
-        $shipment = Shipment::create($validated);
+        $shipment = Shipment::create([
+            'brand'               => $validated['brand'],
+            'product_quantity'    => $validated['product_quantity'],
+            'product_description' => $validated['product_description'] ?? null,
+            'arriving_time_date'  => $validated['arriving_time_date'],
+            'price'               => $validated['price'],
+            'total_price_variant' => $validated['total_price_variant'],
+        ]);
 
-        // Update orders
-        Order::whereIn('id', $validated['orders'])->update([
+        // Attach shipment to order_items
+        OrderItem::whereIn('id', $validated['order_items'])->update([
             'shipment_id' => $shipment->id,
+        ]);
+
+        // Get unique order IDs from order_items
+        $orderIds = OrderItem::whereIn('id', $validated['order_items'])
+            ->pluck('order_id')
+            ->unique()
+            ->toArray();
+
+        // Update those orders to "In Progress"
+        Order::whereIn('id', $orderIds)->update([
             'status' => 'In Progress',
         ]);
 
-        return response()->json(['message' => 'Shipment created successfully', 'shipment' => $shipment]);
+        return response()->json([
+            'message'     => 'Shipment created successfully',
+            'shipment'    => $shipment,
+            'order_ids'   => $orderIds, // optional, to confirm which orders were updated
+        ]);
     }
 
     public function show($id)
