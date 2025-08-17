@@ -18,8 +18,8 @@ class ProductController extends Controller
             ->when($request->brand, function ($query) use ($request) {
                 $query->where('brand', 'like', '%' . $request->brand . '%');
             })
-            ->when($request->name, function ($query) use ($request) {
-                $query->where('name', 'like', '%' . $request->name . '%');
+            ->when($request->search, function ($query) use ($request) {
+                $query->where('name', 'like', '%' . $request->search . '%');
             })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -114,9 +114,24 @@ class ProductController extends Controller
     public function show($id)
     {
         $product = Product::with(['variants', 'images'])->findOrFail($id);
-
+    
+        // Convert images to base64
+        $product->images->transform(function ($image) {
+            $path = public_path(str_replace(url('/'), '', $image->image_path));
+    
+            if (file_exists($path)) {
+                $imageData = file_get_contents($path);
+                $base64 = 'data:image/' . pathinfo($path, PATHINFO_EXTENSION) . ';base64,' . base64_encode($imageData);
+                $image->image_path = $base64;
+            } else {
+                $image->image_path = null; // or keep original path if you prefer
+            }
+    
+            return $image;
+        });
+    
         return response()->json($product);
-    }
+    }    
 
     /**
      * Show the form for editing the specified resource.

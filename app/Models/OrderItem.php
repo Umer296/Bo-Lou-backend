@@ -14,6 +14,7 @@ class OrderItem extends Model
         'product_id',
         'shipment_id',
         'product_quantity',
+        'variant_id', // <-- added
     ];
 
     /**
@@ -38,5 +39,13 @@ class OrderItem extends Model
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
+    }
+
+    /**
+     * OrderItem belongs to a Product Variant
+     */
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id');
     }
 }

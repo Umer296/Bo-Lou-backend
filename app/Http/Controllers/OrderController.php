@@ -20,7 +20,6 @@ class OrderController extends Controller
         $query = Order::with([
             'customer',
             'orderItems.product', // load product inside orderItems
-            'shipment'
         ]);
 
         if ($status) {
@@ -50,9 +49,11 @@ class OrderController extends Controller
 
                 'delivery_time' => 'nullable|date',
                 'total_price' => 'required|numeric|min:0',
+
                 'products' => 'required|array|min:1',
                 'products.*.id' => 'required|exists:products,id',
                 'products.*.quantity' => 'required|integer|min:1',
+                'products.*.variant_id' => 'nullable|integer', // ✅ allow variant_id
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -91,13 +92,14 @@ class OrderController extends Controller
             OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $item['id'],
+                'variant_id' => $item['variant_id'] ?? null, // ✅ handle variant_id
                 'product_quantity' => $item['quantity'],
             ]);
         }
 
         return response()->json([
             'message' => 'Order created successfully',
-            'order' => $order,
+            'order' => $order->load('orderItems.product'), // ✅ return with products
         ], 201);
     }
 
@@ -107,36 +109,28 @@ class OrderController extends Controller
         return $order->load([
             'customer',
             'orderItems.product', // products through orderItems
-            'shipment'
         ]);
     }
 
     // Update an order
-    public function update(Request $request, $order_id)
+    public function update(Request $request, Order $order)
     {
-        $order = Order::with(['customer', 'orderItems.product'])->findOrFail($order_id);
-
         try {
             $validated = $request->validate([
-                // Customer fields
                 'customer_name' => 'required|string',
                 'customer_address' => 'required|string',
                 'customer_city' => 'required|string',
                 'customer_phone_number' => 'required|string',
                 'customer_email' => 'required|email',
                 'customer_payment_method' => 'required|string',
-
-                // Product fields (assuming only updating 1st product in order)
-                'product_name' => 'required|string',
-                'product_description' => 'nullable|string',
-                'product_price' => 'required|numeric',
-                'product_quantity' => 'required|integer',
-                'brand' => 'required|string',
-
-                // Order fields
+    
                 'delivery_time' => 'nullable|date',
-                'status' => 'in:Pending,In Progress,Cancelled,Completed',
-                'total_price' => 'required|numeric|min:0', // <-- added
+                'total_price' => 'required|numeric|min:0',
+    
+                'products' => 'required|array|min:1',
+                'products.*.id' => 'required|exists:products,id',
+                'products.*.quantity' => 'required|integer|min:1',
+                'products.*.variant_id' => 'nullable|integer', // ✅ allow variant_id
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -144,50 +138,50 @@ class OrderController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         }
-
-        // Update Customer
-        $order->customer->update([
-            'name' => $validated['customer_name'],
-            'address' => $validated['customer_address'],
-            'city' => $validated['customer_city'],
-            'phone_number' => $validated['customer_phone_number'],
-            'email' => $validated['customer_email'],
-            'payment_method' => $validated['customer_payment_method'],
+    
+        // ✅ Update or create customer
+        $customer = Customer::updateOrCreate(
+            ['email' => $validated['customer_email']],
+            [
+                'name' => $validated['customer_name'],
+                'address' => $validated['customer_address'],
+                'city' => $validated['customer_city'],
+                'phone_number' => $validated['customer_phone_number'],
+                'payment_method' => $validated['customer_payment_method'],
+            ]
+        );
+    
+        // ✅ Format delivery time
+        $deliveryTime = $validated['delivery_time'] 
+            ? \Carbon\Carbon::parse($validated['delivery_time'])->format('Y-m-d H:i:s') 
+            : null;
+    
+        // ✅ Update order details
+        $order->update([
+            'customer_id' => $customer->id,
+            'delivery_time' => $deliveryTime,
+            'total_price' => $validated['total_price'],
         ]);
-
-        // Update first product in orderItems
-        if ($order->orderItems->isNotEmpty()) {
-            $orderItem = $order->orderItems->first();
-
-            $orderItem->product->update([
-                'name' => $validated['product_name'],
-                'description' => $validated['product_description'],
-                'price' => $validated['product_price'],
-                'brand' => $validated['brand'],
-            ]);
-
-            // Update pivot quantity
-            $order->products()->updateExistingPivot($orderItem->product_id, [
-                'product_quantity' => $validated['product_quantity']
+    
+        // ✅ Remove old order items
+        $order->orderItems()->delete();
+    
+        // ✅ Insert new order items
+        foreach ($validated['products'] as $item) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item['id'],
+                'variant_id' => $item['variant_id'] ?? null, // ✅ handle variant_id
+                'product_quantity' => $item['quantity'],
             ]);
         }
-
-        // Update Order
-        $deliveryTime = $validated['delivery_time']
-            ? \Carbon\Carbon::parse($validated['delivery_time'])->format('Y-m-d H:i:s')
-            : null;
-
-        $order->update([
-            'delivery_time' => $deliveryTime,
-            'status' => $validated['status'],
-            'total_price' => $validated['total_price'], // <-- set directly from request
-        ]);
-
+    
         return response()->json([
-            'message' => 'Order and related data updated',
-            'order' => $order->fresh(['customer', 'orderItems.product', 'shipment'])
+            'message' => 'Order updated successfully',
+            'order' => $order->load('orderItems.product'), // ✅ return with products
         ]);
     }
+    
 
     // Delete an order
     public function destroy(Order $order)
@@ -196,22 +190,28 @@ class OrderController extends Controller
         if ($order->shipment) {
             $order->shipment->delete();
         }
-
-        // Delete related products and pivot records
-        if ($order->products()->exists()) {
-            // Detach products from pivot table (order_items)
-            $order->products()->detach();
+    
+        // Delete related products and pivot records (order_items)
+        if ($order->orderItems()->exists()) {
+            foreach ($order->orderItems as $orderItem) {
+                // If you want to clear variant association explicitly
+                $orderItem->variant_id = null;
+                $orderItem->save();
+    
+                // Then delete the order_item record itself
+                $orderItem->delete();
+            }
         }
-
+    
         // Delete customer if exists
         if ($order->customer) {
             $order->customer->delete();
         }
-
+    
         // Finally delete the order itself
         $order->delete();
-
+    
         return response()->json(['message' => 'Order and related data deleted successfully']);
-    }
+    }    
 
 }
