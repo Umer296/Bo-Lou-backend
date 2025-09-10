@@ -25,4 +25,10 @@ class Shipment extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class, 'order_items');
+    }
+
 }

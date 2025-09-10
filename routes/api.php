@@ -8,6 +8,8 @@ use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\Api\ShopifyProductsController;
+use App\Http\Controllers\DashboardController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -27,5 +29,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('products', ProductController::class);
     Route::apiResource('order-item', OrderItemController::class);
     Route::get('/shopify-products', [ShopifyProductsController::class, 'index']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'index']);
 
 });

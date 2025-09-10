@@ -32,4 +32,9 @@ class Order extends Model
                     ->withPivot('product_quantity')
                     ->withTimestamps();
     }
+
+    public function shipments()
+    {
+        return $this->belongsToMany(Shipment::class, 'order_items');
+    }
 }
