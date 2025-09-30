@@ -89,7 +89,8 @@ class ProductController extends Controller
                     ProductVariant::create([
                         'product_id' => $product->id,
                         'name'       => $variantData['name'] ?? null,
-                        'price'      => $variantData['price'] ?? null,
+                        'product_price' => $variantData['product_price'] ?? null,
+                        'product_cost' => $variantData['product_cost'] ?? null,
                         'attributes' => $variantData['attributes'] ?? [],
                     ]);
                 }
@@ -124,7 +125,7 @@ class ProductController extends Controller
                 $base64 = 'data:image/' . pathinfo($path, PATHINFO_EXTENSION) . ';base64,' . base64_encode($imageData);
                 $image->image_path = $base64;
             } else {
-                $image->image_path = null; // or keep original path if you prefer
+                $image->image_path = $image->image_path; // or keep original path if you prefer
             }
     
             return $image;
@@ -204,7 +205,8 @@ class ProductController extends Controller
                     ProductVariant::create([
                         'product_id' => $product->id,
                         'name'       => $variantData['name'] ?? null,
-                        'price'      => $variantData['price'] ?? null,
+                        'product_price' => $variantData['product_price'] ?? null,
+                        'product_cost' => $variantData['product_cost'] ?? null,
                         'attributes' => $variantData['attributes'] ?? [],
                     ]);
                 }

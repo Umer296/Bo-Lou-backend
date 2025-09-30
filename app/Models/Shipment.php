@@ -15,7 +15,7 @@ class Shipment extends Model
         'shipment_description',
         'arriving_time_date',
         'total_price_variant',
-        'price',
+        'shipment_charges'
     ];
 
     /**

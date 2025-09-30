@@ -17,7 +17,7 @@ class ShipmentController extends Controller
             'shipment_quantity'    => 'required|integer',
             'shipment_description' => 'nullable|string',
             'arriving_time_date'   => 'required|date',
-            'price'                => 'required|numeric',
+            'shipment_charges'     => 'required|numeric',
             'total_price_variant'  => 'required|numeric',
             'order_items'          => 'required|array',
             'order_items.*'        => 'exists:order_items,id',
@@ -32,7 +32,7 @@ class ShipmentController extends Controller
             'shipment_quantity'    => $validated['shipment_quantity'],
             'shipment_description' => $validated['shipment_description'] ?? null,
             'arriving_time_date'   => $validated['arriving_time_date'],
-            'price'                => $validated['price'],
+            'shipment_charges'     => $validated['shipment_charges'],
             'total_price_variant'  => $validated['total_price_variant'],
         ]);
 
@@ -63,7 +63,7 @@ class ShipmentController extends Controller
     {
         $shipment = Shipment::with([
             'orderItems.order',            // order details
-            'orderItems.product',          // product details
+            'orderItems.product.images',          // product details
             'orderItems.variant'           // if you want variant details too
         ])->findOrFail($id);
     
@@ -93,7 +93,7 @@ class ShipmentController extends Controller
             'shipment_quantity'    => 'required|integer',
             'shipment_description' => 'nullable|string',
             'arriving_time_date'   => 'required|date',
-            'price'                => 'required|numeric',
+            'shipment_charges'     => 'required|numeric',
             'total_price_variant'  => 'required|numeric',
             'order_items'          => 'required|array',
             'order_items.*'        => 'exists:order_items,id',
@@ -110,7 +110,7 @@ class ShipmentController extends Controller
             'shipment_quantity'    => $validated['shipment_quantity'],
             'shipment_description' => $validated['shipment_description'] ?? null,
             'arriving_time_date'   => $validated['arriving_time_date'],
-            'price'                => $validated['price'],
+            'shipment_charges'     => $validated['shipment_charges'],
             'total_price_variant'  => $validated['total_price_variant'],
         ]);
 

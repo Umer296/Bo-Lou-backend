@@ -73,7 +73,8 @@ class ShopifyProductService
                             ],
                             [
                                 'name' => $variant['title'] ?? '',
-                                'price' => $variant['price'] ?? 0,
+                                'product_price' => $variant['price'] ?? 0,
+                                'product_cost' => $variant['price'] ?? 0,
                                 'stock' => $variant['inventory_quantity'] ?? 0,
                                 'attributes' => [
                                     'option1' => $variant['option1'] ?? null,
