@@ -165,27 +165,39 @@ class ProductController extends Controller
                     if (file_exists($oldPath)) unlink($oldPath);
                     $oldImage->delete();
                 }
-
-                // Save new images
-                foreach ($request->images as $index => $base64Image) {
-                    if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+            
+                foreach ($request->images as $index => $image) {
+                    // ✅ 1) If it's already a valid URL, save it directly without processing
+                    if (filter_var($image, FILTER_VALIDATE_URL)) {
+                        ProductImage::create([
+                            'product_id' => $product->id,
+                            'image_path' => $image, // Keep as-is
+                            'is_main'    => $index === 0,
+                        ]);
+            
+                        continue; // Move to the next image
+                    }
+            
+                    // ✅ 2) Otherwise, treat it as Base64 and decode it
+                    if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
                         $extension = strtolower($type[1]);
-                        $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
-                        $base64Image = base64_decode($base64Image);
-
-                        if ($base64Image === false) {
+                        $imageData = substr($image, strpos($image, ',') + 1);
+                        $imageData = base64_decode($imageData);
+            
+                        if ($imageData === false) {
                             throw new \Exception('Base64 decode failed');
                         }
-
+            
                         $fileName = time() . '_' . uniqid() . '.' . $extension;
-                        $filePath = public_path('uploads/products/' . $fileName);
-
-                        if (!file_exists(public_path('uploads/products'))) {
-                            mkdir(public_path('uploads/products'), 0777, true);
+                        $uploadDir = public_path('uploads/products/');
+            
+                        if (!file_exists($uploadDir)) {
+                            mkdir($uploadDir, 0777, true);
                         }
-
-                        file_put_contents($filePath, $base64Image);
-
+            
+                        $filePath = $uploadDir . $fileName;
+                        file_put_contents($filePath, $imageData);
+            
                         ProductImage::create([
                             'product_id' => $product->id,
                             'image_path' => url('uploads/products/' . $fileName),
@@ -193,7 +205,7 @@ class ProductController extends Controller
                         ]);
                     }
                 }
-            }
+            }            
 
             // 3️⃣ Update variants
             if ($request->has('variants') && is_array($request->variants)) {

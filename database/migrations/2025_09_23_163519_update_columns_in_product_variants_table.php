@@ -16,8 +16,8 @@ return new class extends Migration
             $table->dropColumn('price');
 
             // Add new columns
-            $table->decimal('selling_price', 10, 2)->after('id');
-            $table->decimal('product_cost', 10, 2)->after('selling_price');
+            $table->decimal('product_price', 10, 2)->after('id');
+            $table->decimal('product_cost', 10, 2)->after('product_price');
         });
     }
 
