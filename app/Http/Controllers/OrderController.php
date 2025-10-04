@@ -106,10 +106,19 @@ class OrderController extends Controller
     // Show a specific order
     public function show(Order $order)
     {
-        return $order->load([
+        $order->load([
             'customer',
-            'orderItems.product', // products through orderItems
+            'orderItems.product',
+            'orderItems.variant', // <-- load variant to access product_price
         ]);
+
+        // Append product_price to each order item
+        $order->orderItems->transform(function ($item) {
+            $item->product_price = $item->variant->product_price ?? null;
+            return $item;
+        });
+
+        return $order;
     }
 
     // Update an order
